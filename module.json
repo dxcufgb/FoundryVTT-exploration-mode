@@ -1,0 +1,46 @@
+{
+  "id": "dxcufgbs-exploration-mode",
+  "title": "Dxcufgb's Exploration Mode",
+  "description": "Rounds outside combat for dnd5e: the GM starts Exploration Mode and every player moves at the same time, limited to their character's speed each round. Going further asks whether to Dash with the action, or with the bonus action for characters with Cunning Action, Step of the Wind and similar features, and then the movement stops for good until the next round. A small panel shows the round and everyone's movement left.",
+  "version": "0.1.0",
+  "authors": [
+    {
+      "name": "Dxcufgb",
+      "url": "https://github.com/Dxcufgb"
+    }
+  ],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "url": "https://github.com/dxcufgb/FoundryVTT-exploration-mode",
+  "manifest": "https://github.com/dxcufgb/FoundryVTT-exploration-mode/releases/latest/download/module.json",
+  "download": "https://github.com/dxcufgb/FoundryVTT-exploration-mode/releases/latest/download/module.zip",
+  "bugs": "https://github.com/dxcufgb/FoundryVTT-exploration-mode/issues",
+  "readme": "https://github.com/dxcufgb/FoundryVTT-exploration-mode#readme",
+  "license": "LICENSE",
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/exploration-mode.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.0.0"
+        }
+      }
+    ]
+  }
+}
