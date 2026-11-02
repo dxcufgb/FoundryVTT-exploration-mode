@@ -1,5 +1,60 @@
 {
   "DXEM": {
-    "Title": "Exploration Mode"
+    "Title": "Exploration Mode",
+    "Control": {
+      "Toggle": "Exploration Mode",
+      "Panel": "Exploration panel"
+    },
+    "Panel": {
+      "Inactive": "Exploration Mode is off",
+      "Round": "Exploration · Round {round}",
+      "Paused": "Exploration paused: movement is free",
+      "Combat": "Combat running: exploration limits paused",
+      "NoCharacters": "No player characters on this scene.",
+      "LeftTooltip": "Movement left this round",
+      "ActionUsed": "Dashed with the action",
+      "ActionFree": "Action dash not used",
+      "BonusUsed": "Dashed with the bonus action",
+      "BonusFree": "Bonus action dash not used",
+      "Start": "Start exploration",
+      "NextRound": "Next round",
+      "Pause": "Pause (movement is free)",
+      "Resume": "Resume the limits",
+      "End": "End exploration",
+      "EndTitle": "End Exploration Mode",
+      "EndConfirm": "End Exploration Mode on this scene? Everyone's movement trail is cleared."
+    },
+    "Dash": {
+      "Title": "Out of movement",
+      "Content": "{name} has used all their movement this round. Dash to move another {speed}?",
+      "Action": "Dash (Action)",
+      "Bonus": "Dash (Bonus Action)",
+      "Stop": "Stop here"
+    },
+    "Chat": {
+      "DashAction": "{name} dashes (Action).",
+      "DashBonus": "{name} dashes (Bonus Action)."
+    },
+    "Combat": {
+      "ResumeTitle": "Resume exploration?",
+      "ResumeContent": "The combat has ended. Resume Exploration Mode on this scene with a new round, or end it?",
+      "Resume": "Resume",
+      "End": "End exploration"
+    },
+    "Notify": {
+      "GMOnly": "Only a GM can change Exploration Mode.",
+      "NoMovement": "{name} has no movement left this round.",
+      "NewRound": "Exploration round {round}: your movement is back."
+    },
+    "Settings": {
+      "BonusDashFeatures": {
+        "Name": "Bonus-action Dash features",
+        "Hint": "Comma-separated names of features (or active effects) that let a character Dash as a bonus action. A character with one of them can dash twice per round: once with the action and once with the bonus action. Spells the character knows don't count, only their active effect."
+      },
+      "AutoOpenPanel": {
+        "Name": "Open the panel when exploration starts",
+        "Hint": "Opens the Exploration panel when the GM starts Exploration Mode on the scene you're viewing."
+      }
+    }
   }
 }
