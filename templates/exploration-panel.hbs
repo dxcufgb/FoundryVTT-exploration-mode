@@ -1,0 +1,56 @@
+<section class="dxem-body">
+  <header class="dxem-status {{#if limited}}limited{{/if}}">
+    <i class="fa-solid {{#if combat}}fa-swords{{else if paused}}fa-pause{{else if active}}fa-person-hiking{{else}}fa-moon{{/if}}"></i>
+    <span>{{status}}</span>
+  </header>
+
+  {{#if active}}
+  {{#if rows.length}}
+  <ol class="dxem-rows">
+    {{#each rows}}
+    <li class="dxem-row {{#if out}}out{{/if}}" data-uuid="{{uuid}}" data-action="select">
+      <img class="dxem-portrait" src="{{img}}" alt="">
+      <div class="dxem-info">
+        <div class="dxem-line">
+          <span class="dxem-name">{{name}}</span>
+          <span class="dxem-left" data-tooltip="DXEM.Panel.LeftTooltip">{{remaining}}&nbsp;{{@root.units}}</span>
+        </div>
+        <div class="dxem-bar"><span style="width: {{pct}}%"></span></div>
+        <div class="dxem-line dxem-sub">
+          <span>{{used}} / {{budget}} {{@root.units}} · {{actionLabel}}</span>
+          <span class="dxem-pips">
+            <i class="fa-solid fa-person-running {{#if action}}used{{/if}}" data-tooltip="{{#if action}}DXEM.Panel.ActionUsed{{else}}DXEM.Panel.ActionFree{{/if}}"></i>
+            {{#if bonusAvailable}}
+            <i class="fa-solid fa-bolt {{#if bonus}}used{{/if}}" data-tooltip="{{#if bonus}}DXEM.Panel.BonusUsed{{else}}DXEM.Panel.BonusFree{{/if}}"></i>
+            {{/if}}
+          </span>
+        </div>
+      </div>
+    </li>
+    {{/each}}
+  </ol>
+  {{else}}
+  <p class="dxem-empty">{{localize "DXEM.Panel.NoCharacters"}}</p>
+  {{/if}}
+  {{/if}}
+
+  {{#if isGM}}
+  <footer class="dxem-buttons">
+    {{#if active}}
+    <button type="button" data-action="nextRound" {{#if combat}}disabled{{/if}}>
+      <i class="fa-solid fa-forward-step"></i> {{localize "DXEM.Panel.NextRound"}}
+    </button>
+    <button type="button" data-action="pause" data-tooltip="{{#if paused}}DXEM.Panel.Resume{{else}}DXEM.Panel.Pause{{/if}}">
+      <i class="fa-solid {{#if paused}}fa-play{{else}}fa-pause{{/if}}"></i>
+    </button>
+    <button type="button" data-action="end" data-tooltip="DXEM.Panel.End">
+      <i class="fa-solid fa-stop"></i>
+    </button>
+    {{else}}
+    <button type="button" data-action="start" {{#unless scene}}disabled{{/unless}}>
+      <i class="fa-solid fa-person-hiking"></i> {{localize "DXEM.Panel.Start"}}
+    </button>
+    {{/if}}
+  </footer>
+  {{/if}}
+</section>

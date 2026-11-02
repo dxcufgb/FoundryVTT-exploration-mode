@@ -1,4 +1,4 @@
 {
   "lint": "node --test tests/*.test.mjs",
-  "include": ["module.json", "LICENSE", "README.md", "CHANGELOG.md", "lang", "scripts", "styles"]
+  "include": ["module.json", "LICENSE", "README.md", "CHANGELOG.md", "lang", "scripts", "styles", "templates"]
 }
