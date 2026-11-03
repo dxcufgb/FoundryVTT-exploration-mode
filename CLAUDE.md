@@ -42,4 +42,4 @@ hard stop after that. No build step, no npm dependencies, no hard module depende
 ## Conventions
 - `MODULE_ID` must equal `id` in `module.json`; every visible setting needs a Name and Hint in `lang/en.json`.
   UI strings are under `DXEM.*` (the test checks every key used).
-- Update `README.md` when features, settings or the API change.
+- Update the wiki (not `README.md`, which only has the install steps and links to the wiki) when features, settings or the API change.
