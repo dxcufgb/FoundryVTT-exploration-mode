@@ -20,6 +20,7 @@ import { MODULE_ID, DASH_FLAG, LIMITED_METHODS, num } from "./util.js";
 import { getState, limitsOn, isLimitedToken } from "./state.js";
 import { speedFor, multiplier, firstOverIndex, largestFittingFraction, lerpWaypoint, totalCost, EPSILON } from "./movement-math.js";
 import { canBonusDash, schedulePrompt } from "./dash.js";
+import { crumb } from "./debug-recorder.js";
 
 /** uuid -> {method, ignore} of a token whose movement update is being prepared on this client. */
 const moving = new Map();
@@ -164,6 +165,7 @@ async function preUpdateWrapper(wrapped, changed, options, user) {
     }
   } catch (err) {
     console.error(`${MODULE_ID} | movement tag`, err);
+    crumb("limit.error", { where: "preUpdate" });
   }
   try {
     return await wrapped(changed, options, user);
@@ -187,10 +189,12 @@ function constrainWrapper(wrapped, waypoints, options = {}) {
     // Cut where the movement runs out (possibly at the origin: no movement left) and offer a dash
     const { path: limited, cut } = cutPath(this, path, options);
     if (!cut) return result;
+    crumb("limit.cut", { method: tag.method, atOrigin: limited.length < 2, gridless: !!canvas.grid?.isGridless });
     schedulePrompt(doc);
     return [limited, true];
   } catch (err) {
     console.error(`${MODULE_ID} | movement limit`, err);
+    crumb("limit.error", { where: "constrain" });
     return result;
   }
 }
@@ -200,6 +204,7 @@ function recordWrapper(wrapped, ...args) {
     if (limitApplies(this)) return true;
   } catch (err) {
     console.error(`${MODULE_ID} | record movement`, err);
+    crumb("limit.error", { where: "record" });
   }
   return wrapped(...args);
 }
@@ -209,6 +214,13 @@ function recordWrapper(wrapped, ...args) {
 /* -------------------------------------------- */
 
 const patched = new Set();
+/** How the core methods were wrapped: {libWrapper, manual, missing} counts. */
+const patchCounts = { libWrapper: 0, manual: 0, missing: 0 };
+
+/** Wrapping and in-flight movement state, for the Debug Recorder snapshot. */
+export function patchStats() {
+  return { ...patchCounts, movingNow: moving.size };
+}
 
 /** Wraps a method with libWrapper when it is active, otherwise by hand (keeping whatever was there before). */
 function wrap(target, fn, type) {
@@ -216,6 +228,7 @@ function wrap(target, fn, type) {
   patched.add(target);
   if (game.modules.get("lib-wrapper")?.active && globalThis.libWrapper) {
     globalThis.libWrapper.register(MODULE_ID, target, fn, type);
+    patchCounts.libWrapper += 1;
     return;
   }
   const parts = target.split(".");
@@ -223,6 +236,7 @@ function wrap(target, fn, type) {
   const owner = parts.reduce((o, k) => o?.[k], globalThis);
   if (!owner) {
     console.warn(`${MODULE_ID} | cannot wrap ${target}`);
+    patchCounts.missing += 1;
     return;
   }
   const own = Object.hasOwn(owner, name) ? owner[name] : null;
@@ -230,6 +244,7 @@ function wrap(target, fn, type) {
     const original = own ?? Object.getPrototypeOf(owner)[name];
     return fn.call(this, original.bind(this), ...args);
   };
+  patchCounts.manual += 1;
 }
 
 /** Called once in "setup", after every system and module has set its Token classes. */

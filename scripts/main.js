@@ -14,9 +14,10 @@
  */
 import { MODULE_ID, STATE_FLAG, DEFAULT_BONUS_DASH_FEATURES, t, isResponsibleGM } from "./util.js";
 import * as state from "./state.js";
-import { registerMovementLimit, getMovement } from "./movement.js";
-import { canBonusDash, takeDash } from "./dash.js";
+import { registerMovementLimit, getMovement, getDashes, patchStats } from "./movement.js";
+import { canBonusDash, takeDash, pendingPrompts } from "./dash.js";
 import { ExplorationPanel } from "./apps/exploration-panel.js";
+import { registerDebugRecorder, crumb } from "./debug-recorder.js";
 
 /* -------------------------------------------- */
 /*  Settings                                    */
@@ -131,7 +132,56 @@ function noteState(scene, { announce = true } = {}) {
 
 Hooks.once("ready", () => {
   for (const scene of game.scenes) noteState(scene, { announce: false });
+  registerDebugRecorder({ snapshot: debugSnapshot });
 });
+
+/* -------------------------------------------- */
+/*  Debug Recorder (optional)                   */
+/* -------------------------------------------- */
+
+/**
+ * Runtime state for Dxcufgb's Debug Recorder: counts, booleans and the module's own enum values only. Never token,
+ * actor, user, scene or feature names.
+ */
+function debugSnapshot() {
+  const scene = canvas?.scene ?? null;
+  const s = state.getState(scene);
+  const tokens = state.limitedTokens(scene);
+  const dashes = { action: 0, bonus: 0, bonusAvailable: 0, outOfMovement: 0, unknownSpeed: 0 };
+  for (const doc of tokens) {
+    try {
+      const m = getMovement(doc);
+      const d = getDashes(doc);
+      if (d.action) dashes.action += 1;
+      if (d.bonus) dashes.bonus += 1;
+      if (m.dashes.bonusAvailable) dashes.bonusAvailable += 1;
+      if (!Number.isFinite(m.speed)) dashes.unknownSpeed += 1;
+      else if (m.remaining <= 0) dashes.outOfMovement += 1;
+    } catch {
+      /* a broken token must not break the snapshot */
+    }
+  }
+  return {
+    dnd5e: game.system?.id === "dnd5e",
+    libWrapper: !!(game.modules.get("lib-wrapper")?.active && globalThis.libWrapper),
+    responsibleGM: isResponsibleGM(),
+    isGM: !!game.user?.isGM,
+    patches: patchStats(),
+    activeScenes: game.scenes?.filter(sc => state.getState(sc).active).length ?? 0,
+    viewedScene: scene ? {
+      active: s.active,
+      round: s.round,
+      paused: s.paused,
+      phase: state.getPhase(scene),
+      combatRunning: state.combatRunning(scene),
+      participants: tokens.length,
+      ...dashes
+    } : null,
+    dashPromptsPending: pendingPrompts(),
+    panelOpen: !!ExplorationPanel.instance?.rendered,
+    autoOpenPanel: !!game.settings.get(MODULE_ID, "autoOpenPanel")
+  };
+}
 
 Hooks.on("canvasReady", () => {
   const scene = canvas.scene;
@@ -186,6 +236,7 @@ Hooks.on("deleteCombat", async combat => {
     no: { label: t("Combat.End") },
     rejectClose: false
   });
+  crumb("combat.resume", { choice: resume === true ? "resume" : resume === false ? "end" : "closed" });
   if (resume === true) await state.nextRound(scene);
   else if (resume === false) await state.end(scene);
 });
