@@ -49,12 +49,15 @@ async function writeState(scene, patch) {
   await scene.update(update);
 }
 
-/** The scene's phase as one of the module's fixed values: inactive, paused, combat or limited. */
+/**
+ * The scene's phase as one of the module's fixed values: inactive, combat, paused or limited. Combat comes before
+ * paused, the same order as the panel's status line.
+ */
 export function getPhase(scene) {
   const s = getState(scene);
   if (!s.active) return "inactive";
-  if (s.paused) return "paused";
-  return combatRunning(scene) ? "combat" : "limited";
+  if (combatRunning(scene)) return "combat";
+  return s.paused ? "paused" : "limited";
 }
 
 /** Clears the recorded movement of every limited token on the scene, so everyone starts the round fresh. */

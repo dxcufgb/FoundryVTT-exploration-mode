@@ -30,6 +30,7 @@ export function crumb(key, data) {
   }
 }
 
+/** The registered snapshot function, guarded so a bug in it gives `{snapshotError: true}` instead of throwing. */
 function snapshot() {
   try {
     return snapshotFn() ?? {};
@@ -39,12 +40,15 @@ function snapshot() {
   }
 }
 
-/** Register with the recorder once (whichever of the ready hook or the fallback comes first). */
+/**
+ * Register with the recorder once (whichever of the ready hook or the fallback comes first). The API is kept only
+ * when `register` succeeded, so a failed attempt can be retried by the fallback and a successful one never repeats.
+ */
 function connect(rec) {
   if (recorder || !rec || typeof rec.register !== "function") return;
-  recorder = rec;
   try {
     rec.register(MODULE_ID, { snapshot });
+    recorder = rec;
   } catch (err) {
     console.warn(`${MODULE_ID} | debug recorder registration failed`, err);
   }

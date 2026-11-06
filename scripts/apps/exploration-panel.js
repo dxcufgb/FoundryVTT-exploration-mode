@@ -107,6 +107,7 @@ export class ExplorationPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     };
   }
 
+  /** Leaves an `app.render` breadcrumb for the Debug Recorder on the first render. */
   _onRender(context, options) {
     super._onRender?.(context, options);
     // Only the first render: the panel re-renders on every token change
