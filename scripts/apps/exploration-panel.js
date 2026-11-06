@@ -6,6 +6,7 @@
 import { MODULE_ID, TEMPLATE_PATH, t } from "../util.js";
 import { getState, combatRunning, limitedTokens, start, end, nextRound, setPaused } from "../state.js";
 import { getMovement } from "../movement.js";
+import { crumb } from "../debug-recorder.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -104,6 +105,15 @@ export class ExplorationPanel extends HandlebarsApplicationMixin(ApplicationV2) 
           : state.paused ? t("Panel.Paused")
             : t("Panel.Round", { round: state.round })
     };
+  }
+
+  /** Leaves an `app.render` breadcrumb for the Debug Recorder on the first render. */
+  _onRender(context, options) {
+    super._onRender?.(context, options);
+    // Only the first render: the panel re-renders on every token change
+    if (options?.isFirstRender) {
+      crumb("app.render", { active: context.active, combat: context.combat, paused: context.paused, rows: context.rows.length });
+    }
   }
 
   _onPosition(position) {

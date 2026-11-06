@@ -4,6 +4,7 @@
  * active, not paused and no started combat runs on it (combat pauses the limits without touching the flag).
  */
 import { MODULE_ID, STATE_FLAG, t } from "./util.js";
+import { crumb } from "./debug-recorder.js";
 
 /** The scene's exploration state, with defaults. */
 export function getState(scene = canvas?.scene) {
@@ -48,6 +49,17 @@ async function writeState(scene, patch) {
   await scene.update(update);
 }
 
+/**
+ * The scene's phase as one of the module's fixed values: inactive, combat, paused or limited. Combat comes before
+ * paused, the same order as the panel's status line.
+ */
+export function getPhase(scene) {
+  const s = getState(scene);
+  if (!s.active) return "inactive";
+  if (combatRunning(scene)) return "combat";
+  return s.paused ? "paused" : "limited";
+}
+
 /** Clears the recorded movement of every limited token on the scene, so everyone starts the round fresh. */
 export async function clearMovement(scene) {
   const ids = limitedTokens(scene).filter(d => d._source._movementHistory?.length).map(d => d.id);
@@ -60,13 +72,16 @@ export async function start(scene = canvas?.scene) {
   if (!scene || !requireGM()) return false;
   await clearMovement(scene);
   await writeState(scene, { active: true, round: 1, paused: false });
+  crumb("mode.start", { participants: limitedTokens(scene).length, combat: combatRunning(scene) });
   return true;
 }
 
 export async function end(scene = canvas?.scene) {
   if (!scene || !requireGM()) return false;
+  const { round } = getState(scene);
   await writeState(scene, { active: false, round: 0, paused: false });
   await clearMovement(scene);
+  crumb("mode.end", { rounds: round });
   return true;
 }
 
@@ -76,6 +91,7 @@ export async function nextRound(scene = canvas?.scene) {
   if (!s.active) return false;
   await clearMovement(scene);
   await writeState(scene, { round: s.round + 1 });
+  crumb("round.next", { round: s.round + 1, participants: limitedTokens(scene).length });
   return true;
 }
 
@@ -83,5 +99,6 @@ export async function setPaused(paused, scene = canvas?.scene) {
   if (!scene || !requireGM()) return false;
   if (!getState(scene).active) return false;
   await writeState(scene, { paused: !!paused });
+  crumb("mode.pause", { paused: !!paused });
   return true;
 }

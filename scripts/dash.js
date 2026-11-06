@@ -7,9 +7,15 @@
 import { MODULE_ID, DASH_FLAG, t, escapeHTML, parseNameList } from "./util.js";
 import { getState } from "./state.js";
 import { getDashes, getMovement } from "./movement.js";
+import { crumb } from "./debug-recorder.js";
 
 /** Tokens (uuid) that have a dash question open on this client. */
 const open = new Set();
+
+/** Number of dash questions open (or about to open) on this client. */
+export function pendingPrompts() {
+  return open.size;
+}
 
 /** Does the actor have a feature (or an active effect) from the bonus-action dash list? Spells known don't count. */
 export function canBonusDash(actor) {
@@ -42,6 +48,7 @@ export function schedulePrompt(doc) {
 /** The dash question. Resolves to "action", "bonus" or null. */
 export async function promptDash(doc) {
   const choices = availableDashes(doc);
+  crumb("dash.prompt", { choices: choices.length, pending: open.size });
   if (!choices.length) {
     ui.notifications.warn(t("Notify.NoMovement", { name: doc.name }));
     return null;
@@ -63,6 +70,7 @@ export async function promptDash(doc) {
     buttons,
     rejectClose: false
   });
+  crumb("dash.choice", { choice: ["action", "bonus", "stop"].includes(choice) ? choice : "closed" });
   if (choice !== "action" && choice !== "bonus") return null;
   return (await takeDash(doc, choice)) ? choice : null;
 }
@@ -86,6 +94,7 @@ export async function takeDash(doc, type) {
     content: `<p class="dxem-chat">${t(type === "action" ? "Chat.DashAction" : "Chat.DashBonus", { name: escapeHTML(doc.name) })}</p>`,
     speaker: ChatMessage.implementation.getSpeaker({ token: doc })
   });
+  crumb("dash.take", { type, round: state.round });
   Hooks.callAll("dxcufgbsExplorationDash", doc, type);
   return true;
 }

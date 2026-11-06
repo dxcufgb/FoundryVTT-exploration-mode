@@ -22,6 +22,9 @@ hard stop after that. No build step, no npm dependencies, no hard module depende
   goes over, gridless binary search). Tested in Node.
 - `scripts/dash.js` – `canBonusDash` (feature items and active effects by name, not spells), the dash question
   (DialogV2, one at a time per token), `takeDash` (dot-path update of the token's `dash` flag, chat line, hook).
+- `scripts/debug-recorder.js` – optional integration with Dxcufgb's Debug Recorder (`dxcufgbs-debug-recorder`, not a
+  dependency): `crumb(key, data)` breadcrumbs (no-op unless it is recording) and `registerDebugRecorder({ snapshot })`,
+  called in `ready` with `debugSnapshot` from `main.js`.
 - `scripts/apps/exploration-panel.js` + `templates/exploration-panel.hbs` – the floating panel (one instance,
   debounced re-render, no inputs, position in the `panelPosition` client setting).
 - `tests/*.test.mjs` – node:test checks run by CI through `.github/foundry-module.json` (`lint`). Not shipped.
@@ -36,6 +39,9 @@ hard stop after that. No build step, no npm dependencies, no hard module depende
   limited.
 - Only GM users write the scene `state` flag; players write only their own token's `dash` flag, as dot paths. A
   `dash` flag from another round counts as no dashes, so a new round never writes to every token.
+- Debug-recorder integration is optional (the module works the same without it, and a recorder error must never
+  break it); snapshot/breadcrumb data must never contain names, free text, image paths or URLs (only counts,
+  booleans, numbers and the module's own enum values).
 - Stable names (used by other modules): API members, hook names `dxcufgbsExploration{Start,End,Round,Dash}`, flag
   names `state` / `dash` and their keys, the `ignoreLimit` move option, setting ids.
 
