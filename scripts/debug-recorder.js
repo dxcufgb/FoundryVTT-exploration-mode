@@ -42,13 +42,13 @@ function snapshot() {
 
 /**
  * Register with the recorder once (whichever of the ready hook or the fallback comes first). The API is kept only
- * when `register` succeeded, so a failed attempt can be retried by the fallback and a successful one never repeats.
+ * when `register` succeeded (it returns false on failure), so a failed attempt can be retried by the fallback and a
+ * successful one never repeats.
  */
 function connect(rec) {
   if (recorder || !rec || typeof rec.register !== "function") return;
   try {
-    rec.register(MODULE_ID, { snapshot });
-    recorder = rec;
+    if (rec.register(MODULE_ID, { snapshot }) !== false) recorder = rec;
   } catch (err) {
     console.warn(`${MODULE_ID} | debug recorder registration failed`, err);
   }
