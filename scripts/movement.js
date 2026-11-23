@@ -14,12 +14,15 @@
  * moves by other modules and macros (method "api"), undo and paste are not, and neither is a move made with
  * {"dxcufgbs-exploration-mode": {ignoreLimit: true}} in its options.
  *
+ * A token whose movement runs out is flagged as spent (dash.js) and stays flagged until it dashes or the round
+ * ends, even if its moves are undone: while flagged, its limited moves stop at the origin.
+ *
  * Nothing here may throw out of a wrapped core method: errors are logged and the move goes through as core made it.
  */
 import { MODULE_ID, DASH_FLAG, LIMITED_METHODS, num } from "./util.js";
 import { getState, limitsOn, isLimitedToken } from "./state.js";
 import { speedFor, multiplier, firstOverIndex, largestFittingFraction, lerpWaypoint, totalCost, EPSILON } from "./movement-math.js";
-import { canBonusDash, schedulePrompt } from "./dash.js";
+import { canBonusDash, schedulePrompt, markSpent } from "./dash.js";
 import { crumb } from "./debug-recorder.js";
 
 /** uuid -> {method, ignore} of a token whose movement update is being prepared on this client. */
@@ -29,12 +32,25 @@ const moving = new Map();
 /*  Reading a token's movement                  */
 /* -------------------------------------------- */
 
+/** The token's dash flag when it is from this round, otherwise null. */
+function roundFlag(doc) {
+  const flag = doc?.flags?.[MODULE_ID]?.[DASH_FLAG];
+  if (!flag || Number(flag.round) !== getState(doc?.parent).round) return null;
+  return flag;
+}
+
 /** The dashes the token has taken this round. A flag from another round counts as none. */
 export function getDashes(doc) {
-  const flag = doc?.flags?.[MODULE_ID]?.[DASH_FLAG];
-  const round = getState(doc?.parent).round;
-  if (!flag || Number(flag.round) !== round) return { action: false, bonus: false };
-  return { action: !!flag.action, bonus: !!flag.bonus };
+  const flag = roundFlag(doc);
+  return { action: !!flag?.action, bonus: !!flag?.bonus };
+}
+
+/**
+ * Has the token used all its movement this round? Once set, it stays set (undoing a move does not clear it) until
+ * the token dashes or a new round starts. While it is set, a player cannot move the token; a GM still can.
+ */
+export function isSpent(doc) {
+  return !!roundFlag(doc)?.spent;
 }
 
 /** The speed of the token's actor for a movement action (Infinity when the actor has no dnd5e movement). */
@@ -48,8 +64,9 @@ function isTeleport(action) {
 
 /**
  * Movement of a token this round.
+ * `remaining` is 0 while the token is flagged as having used all its movement (see isSpent).
  * @returns {{speed: number, used: number, budget: number, remaining: number, max: number, action: string,
- *   dashes: {action: boolean, bonus: boolean, bonusAvailable: boolean}}}
+ *   spent: boolean, dashes: {action: boolean, bonus: boolean, bonusAvailable: boolean}}}
  */
 export function getMovement(doc) {
   const action = doc.movementAction;
@@ -59,9 +76,10 @@ export function getMovement(doc) {
   const used = Math.round(totalCost(doc.movementHistory) * 100) / 100;
   const budget = speed * multiplier(dashes);
   const max = speed * (2 + (bonusAvailable ? 1 : 0));
+  const spent = isSpent(doc);
   return {
-    speed, used, budget, max, action,
-    remaining: Math.max(0, Math.round((budget - used) * 100) / 100),
+    speed, used, budget, max, action, spent,
+    remaining: spent ? 0 : Math.max(0, Math.round((budget - used) * 100) / 100),
     dashes: { ...dashes, bonusAvailable }
   };
 }
@@ -186,10 +204,18 @@ function constrainWrapper(wrapped, waypoints, options = {}) {
     const [path] = result;
     if (!Array.isArray(path) || path.length < 2) return result;
 
-    // Cut where the movement runs out (possibly at the origin: no movement left) and offer a dash
+    // Flagged as out of movement (even if a move was undone since): the token stays put until it dashes
+    if (isSpent(doc)) {
+      crumb("limit.cut", { method: tag.method, atOrigin: true, spent: true, gridless: !!canvas.grid?.isGridless });
+      schedulePrompt(doc);
+      return [[{ ...path[0] }], true];
+    }
+
+    // Cut where the movement runs out (possibly at the origin: no movement left), flag the token and offer a dash
     const { path: limited, cut } = cutPath(this, path, options);
     if (!cut) return result;
-    crumb("limit.cut", { method: tag.method, atOrigin: limited.length < 2, gridless: !!canvas.grid?.isGridless });
+    crumb("limit.cut", { method: tag.method, atOrigin: limited.length < 2, spent: false, gridless: !!canvas.grid?.isGridless });
+    markSpent(doc);
     schedulePrompt(doc);
     return [limited, true];
   } catch (err) {

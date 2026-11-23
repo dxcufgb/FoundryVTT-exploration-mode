@@ -21,7 +21,9 @@ hard stop after that. No build step, no npm dependencies, no hard module depende
 - `scripts/movement-math.js` – pure helpers (speed per action like the dnd5e ruler, dash multiplier, where a path
   goes over, gridless binary search). Tested in Node.
 - `scripts/dash.js` – `canBonusDash` (feature items and active effects by name, not spells), the dash question
-  (DialogV2, one at a time per token), `takeDash` (dot-path update of the token's `dash` flag, chat line, hook).
+  (DialogV2, one at a time per token), `takeDash` (dot-path update of the token's `dash` flag, chat line, hook;
+  clears `spent`), `markSpent` / `checkSpent` (the out-of-movement flag, set when a move is cut or uses the rest).
+- `scripts/marker.js` – the out-of-movement badge drawn as a child of flagged Token placeables (`refreshToken`).
 - `scripts/debug-recorder.js` – optional integration with Dxcufgb's Debug Recorder (`dxcufgbs-debug-recorder`, not a
   dependency): `crumb(key, data)` breadcrumbs (no-op unless it is recording) and `registerDebugRecorder({ snapshot })`,
   called in `ready` with `debugSnapshot` from `main.js`.
@@ -38,11 +40,13 @@ hard stop after that. No build step, no npm dependencies, no hard module depende
   core's result). GM users, API/undo/paste moves and moves with `{[MODULE_ID]: {ignoreLimit: true}}` are never
   limited.
 - Only GM users write the scene `state` flag; players write only their own token's `dash` flag, as dot paths. A
-  `dash` flag from another round counts as no dashes, so a new round never writes to every token.
+  `dash` flag from another round counts as no dashes and not spent, so a new round never writes to every token.
+- `dash.spent` (out of movement) is cleared only by a dash or a new round, never by undo; while it is set the
+  token's limited moves stop at the origin (GM moves are unaffected).
 - Debug-recorder integration is optional (the module works the same without it, and a recorder error must never
   break it); snapshot/breadcrumb data must never contain names, free text, image paths or URLs (only counts,
   booleans, numbers and the module's own enum values).
-- Stable names (used by other modules): API members, hook names `dxcufgbsExploration{Start,End,Round,Dash}`, flag
+- Stable names (used by other modules): API members, hook names `dxcufgbsExploration{Start,End,Round,Dash,Spent}`, flag
   names `state` / `dash` and their keys, the `ignoreLimit` move option, setting ids.
 
 ## Conventions

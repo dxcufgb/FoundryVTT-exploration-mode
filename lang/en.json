@@ -12,6 +12,7 @@
       "Combat": "Combat running: exploration limits paused",
       "NoCharacters": "No player characters on this scene.",
       "LeftTooltip": "Movement left this round",
+      "SpentTooltip": "Out of movement: can't move again until they dash or the next round starts",
       "ActionUsed": "Dashed with the action",
       "ActionFree": "Action dash not used",
       "BonusUsed": "Dashed with the bonus action",
