@@ -3,7 +3,10 @@ export const TEMPLATE_PATH = `modules/${MODULE_ID}/templates`;
 
 /** Scene flag with {active, round, paused}. Written only by GM users. */
 export const STATE_FLAG = "state";
-/** Token flag with {round, action, bonus}: the dashes taken in that round. Written by the token's owner. */
+/**
+ * Token flag with {round, action, bonus, spent}: the dashes taken in that round, and whether the token has used all
+ * its movement (cleared only by a dash or the next round). Written by the token's owner.
+ */
 export const DASH_FLAG = "dash";
 
 /** Movement methods the limit applies to. API moves (other modules, macros), undo and paste are not limited. */

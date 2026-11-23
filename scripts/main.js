@@ -5,17 +5,20 @@
  *   start(scene?), end(scene?), nextRound(scene?), setPaused(paused, scene?)   GM only; scene defaults to the viewed one
  *   isActive(scene?), getRound(scene?), getState(scene?)                       {active, round, paused}
  *   limitsOn(scene?)                                                            active, not paused, no combat running
- *   getMovement(tokenDoc)   {speed, used, remaining, budget, max, action, dashes: {action, bonus, bonusAvailable}}
+ *   getMovement(tokenDoc)   {speed, used, remaining, budget, max, action, spent, dashes: {action, bonus, bonusAvailable}}
+ *   isSpent(tokenDoc)       used all its movement this round (until it dashes or the next round; remaining is 0)
  *   canBonusDash(actor), takeDash(tokenDoc, "action"|"bonus"), openPanel()
  * Skip the limit for one move: tokenDoc.move(waypoints, {"dxcufgbs-exploration-mode": {ignoreLimit: true}})
  * Hooks (on every client): dxcufgbsExplorationStart(scene), dxcufgbsExplorationEnd(scene),
- *   dxcufgbsExplorationRound(scene, round), dxcufgbsExplorationDash(tokenDoc, "action"|"bonus") (mover's client)
- * Flags: scene flags[id].state = {active, round, paused}; token flags[id].dash = {round, action, bonus}
+ *   dxcufgbsExplorationRound(scene, round), dxcufgbsExplorationDash(tokenDoc, "action"|"bonus") (mover's client),
+ *   dxcufgbsExplorationSpent(tokenDoc) (mover's client: the token has used all its movement this round)
+ * Flags: scene flags[id].state = {active, round, paused}; token flags[id].dash = {round, action, bonus, spent}
  */
 import { MODULE_ID, STATE_FLAG, DEFAULT_BONUS_DASH_FEATURES, t, isResponsibleGM } from "./util.js";
 import * as state from "./state.js";
-import { registerMovementLimit, getMovement, getDashes, patchStats } from "./movement.js";
-import { canBonusDash, takeDash, pendingPrompts } from "./dash.js";
+import { registerMovementLimit, getMovement, getDashes, isSpent, patchStats } from "./movement.js";
+import { canBonusDash, takeDash, pendingPrompts, checkSpent } from "./dash.js";
+import { refreshMarker, refreshAllMarkers } from "./marker.js";
 import { ExplorationPanel } from "./apps/exploration-panel.js";
 import { registerDebugRecorder, crumb } from "./debug-recorder.js";
 
@@ -59,6 +62,10 @@ Hooks.once("init", () => {
     getMovement: doc => {
       const tokenDoc = doc?.document ?? doc;
       return tokenDoc ? getMovement(tokenDoc) : null;
+    },
+    isSpent: doc => {
+      const tokenDoc = doc?.document ?? doc;
+      return tokenDoc ? isSpent(tokenDoc) : false;
     },
     canBonusDash,
     takeDash: (doc, type) => takeDash(doc?.document ?? doc, type),
@@ -147,7 +154,7 @@ function debugSnapshot() {
   const scene = canvas?.scene ?? null;
   const s = state.getState(scene);
   const tokens = state.limitedTokens(scene);
-  const dashes = { action: 0, bonus: 0, bonusAvailable: 0, outOfMovement: 0, unknownSpeed: 0 };
+  const dashes = { action: 0, bonus: 0, bonusAvailable: 0, outOfMovement: 0, spent: 0, unknownSpeed: 0 };
   for (const doc of tokens) {
     try {
       const m = getMovement(doc);
@@ -155,6 +162,7 @@ function debugSnapshot() {
       if (d.action) dashes.action += 1;
       if (d.bonus) dashes.bonus += 1;
       if (m.dashes.bonusAvailable) dashes.bonusAvailable += 1;
+      if (m.spent) dashes.spent += 1;
       if (!Number.isFinite(m.speed)) dashes.unknownSpeed += 1;
       else if (m.remaining <= 0) dashes.outOfMovement += 1;
     } catch {
@@ -198,6 +206,7 @@ Hooks.on("updateScene", (scene, changes) => {
   if (scene === canvas?.scene) {
     ExplorationPanel.refresh();
     ui.controls?.render();
+    refreshAllMarkers();
   }
 });
 
@@ -205,8 +214,18 @@ Hooks.on("updateScene", (scene, changes) => {
 const tokenChanged = doc => {
   if (doc.parent === canvas?.scene) ExplorationPanel.refresh();
 };
-Hooks.on("updateToken", tokenChanged);
-Hooks.on("moveToken", doc => tokenChanged(doc));
+Hooks.on("updateToken", doc => {
+  tokenChanged(doc);
+  refreshMarker(doc.object);
+});
+Hooks.on("moveToken", (doc, movement, operation, user) => {
+  tokenChanged(doc);
+  checkSpent(doc, user);
+});
+
+/* The out-of-movement marker on tokens */
+Hooks.on("refreshToken", token => refreshMarker(token));
+Hooks.on("canvasReady", () => refreshAllMarkers());
 Hooks.on("createToken", doc => tokenChanged(doc));
 Hooks.on("deleteToken", doc => tokenChanged(doc));
 Hooks.on("updateActor", () => ExplorationPanel.refresh());
@@ -220,12 +239,16 @@ Hooks.on("updateActiveEffect", () => ExplorationPanel.refresh());
 /*  Combat pauses the limits                    */
 /* -------------------------------------------- */
 
-Hooks.on("updateCombat", () => ExplorationPanel.refresh());
-Hooks.on("createCombat", () => ExplorationPanel.refresh());
-Hooks.on("combatStart", () => ExplorationPanel.refresh());
+const combatChanged = () => {
+  ExplorationPanel.refresh();
+  refreshAllMarkers();
+};
+Hooks.on("updateCombat", combatChanged);
+Hooks.on("createCombat", combatChanged);
+Hooks.on("combatStart", combatChanged);
 
 Hooks.on("deleteCombat", async combat => {
-  ExplorationPanel.refresh();
+  combatChanged();
   if (!isResponsibleGM()) return;
   const scene = combat.scene ?? canvas?.scene;
   if (!scene || !state.getState(scene).active || state.combatRunning(scene)) return;

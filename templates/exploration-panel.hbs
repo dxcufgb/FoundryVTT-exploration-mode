@@ -12,7 +12,7 @@
       <img class="dxem-portrait" src="{{img}}" alt="">
       <div class="dxem-info">
         <div class="dxem-line">
-          <span class="dxem-name">{{name}}</span>
+          <span class="dxem-name">{{#if spent}}<i class="fa-solid fa-ban dxem-spent" data-tooltip="DXEM.Panel.SpentTooltip"></i> {{/if}}{{name}}</span>
           <span class="dxem-left" data-tooltip="DXEM.Panel.LeftTooltip">{{remaining}}&nbsp;{{@root.units}}</span>
         </div>
         <div class="dxem-bar"><span style="width: {{pct}}%"></span></div>
