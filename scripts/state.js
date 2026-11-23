@@ -3,7 +3,7 @@
  * Only GM users write it, always as dot-path updates of single keys. The limits are on while the scene is
  * active, not paused and no started combat runs on it (combat pauses the limits without touching the flag).
  */
-import { MODULE_ID, STATE_FLAG, t } from "./util.js";
+import { MODULE_ID, STATE_FLAG, DASH_FLAG, t } from "./util.js";
 import { crumb } from "./debug-recorder.js";
 
 /** The scene's exploration state, with defaults. */
@@ -68,9 +68,20 @@ export async function clearMovement(scene) {
     { diff: false, noHook: true, _clearMovementHistory: true });
 }
 
+/**
+ * Removes the dash flags (dashes and the out-of-movement flag) of the scene's tokens. Called at start: the rounds
+ * count from 1 again, so a flag left from an earlier session would otherwise count in the new one.
+ */
+export async function clearDashFlags(scene) {
+  const updates = scene?.tokens?.filter(d => d.flags?.[MODULE_ID]?.[DASH_FLAG] !== undefined)
+    .map(d => ({ _id: d.id, [`flags.${MODULE_ID}.-=${DASH_FLAG}`]: null })) ?? [];
+  if (updates.length) await scene.updateEmbeddedDocuments("Token", updates);
+}
+
 export async function start(scene = canvas?.scene) {
   if (!scene || !requireGM()) return false;
   await clearMovement(scene);
+  await clearDashFlags(scene);
   await writeState(scene, { active: true, round: 1, paused: false });
   crumb("mode.start", { participants: limitedTokens(scene).length, combat: combatRunning(scene) });
   return true;

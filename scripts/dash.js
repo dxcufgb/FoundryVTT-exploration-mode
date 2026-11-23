@@ -120,13 +120,15 @@ function writeDashFlag(doc, round, { action, bonus, spent }) {
 export function markSpent(doc) {
   try {
     if (!doc?.isOwner || isSpent(doc) || flagging.has(doc.uuid)) return;
+    // The round the movement ran out in: a new round before the write gives fresh movement, so nothing is written
+    const round = getState(doc.parent).round;
     flagging.add(doc.uuid);
     setTimeout(async () => {
       try {
         const state = getState(doc.parent);
-        if (!state.active || isSpent(doc)) return;
-        await writeDashFlag(doc, state.round, { ...getDashes(doc), spent: true });
-        crumb("movement.spent", { round: state.round });
+        if (!state.active || state.round !== round || isSpent(doc)) return;
+        await writeDashFlag(doc, round, { ...getDashes(doc), spent: true });
+        crumb("movement.spent", { round });
         Hooks.callAll("dxcufgbsExplorationSpent", doc);
       } catch (err) {
         console.error(`${MODULE_ID} | out-of-movement flag`, err);

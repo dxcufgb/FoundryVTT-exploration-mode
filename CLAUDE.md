@@ -12,7 +12,8 @@ hard stop after that. No build step, no npm dependencies, no hard module depende
   end-of-combat question (responsible GM).
 - `scripts/state.js` – the scene state `flags[id].state = {active, round, paused}`; `limitsOn` (active, not paused,
   no started combat on the scene), `isLimitedToken` (player-owned creature), `start` / `end` / `nextRound` /
-  `setPaused` (GM only) and `clearMovement` (clears limited tokens' movement history in one update).
+  `setPaused` (GM only), `clearMovement` (clears limited tokens' movement history in one update) and
+  `clearDashFlags` (removes tokens' `dash` flags at start, since rounds count from 1 again).
 - `scripts/movement.js` – the limit. Wraps (libWrapper or by hand) on `CONFIG.Token.documentClass` /
   `objectClass`: `_shouldRecordMovementHistory` (record a player's moves while the limits are on), `_preUpdate`
   (notes the movement method per token for the constrain step) and `constrainMovementPath` (cuts the path where the
@@ -40,7 +41,8 @@ hard stop after that. No build step, no npm dependencies, no hard module depende
   core's result). GM users, API/undo/paste moves and moves with `{[MODULE_ID]: {ignoreLimit: true}}` are never
   limited.
 - Only GM users write the scene `state` flag; players write only their own token's `dash` flag, as dot paths. A
-  `dash` flag from another round counts as no dashes and not spent, so a new round never writes to every token.
+  `dash` flag from another round counts as no dashes and not spent, so a new round never writes to every token
+  (the GM removes the `dash` flags only at start, so a previous session's round 1 doesn't carry over).
 - `dash.spent` (out of movement) is cleared only by a dash or a new round, never by undo; while it is set the
   token's limited moves stop at the origin (GM moves are unaffected).
 - Debug-recorder integration is optional (the module works the same without it, and a recorder error must never
